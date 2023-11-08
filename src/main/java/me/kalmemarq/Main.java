@@ -1,12 +1,10 @@
 package me.kalmemarq;
 
-import java.nio.ByteBuffer;
-
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.system.MemoryUtil.MemoryAllocator;
 
-import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
 
 public class Main {
     public static void km_main(String[] args) {
@@ -90,6 +88,86 @@ public class Main {
 
         public void destroy() {
             MemoryUtil.nmemFree(this.ptr);
+            this.ptr = -1;
+        }
+    }
+    
+    enum DrawMode {
+        TRIANGLES(GL11.GL_TRIANGLES),
+        QUADS(GL11.GL_TRIANGLES);
+        
+        public final int glEnum;
+        
+        DrawMode(int glEnum) {
+            this.glEnum = glEnum;
+        }
+        
+        public int getIndexCount(int vertexCount) {
+            return switch (this) {
+                case TRIANGLES -> vertexCount;
+                case QUADS -> vertexCount / 4 * 6;
+            };
+        }
+    }
+
+    enum IndexType {
+        UBYTE(GL11.GL_UNSIGNED_BYTE),
+        USHORT(GL11.GL_UNSIGNED_SHORT),
+        UINT(GL11.GL_UNSIGNED_INT);
+
+        public final int glEnum;
+
+        IndexType(int glEnum) {
+            this.glEnum = glEnum;
+        }
+        
+        public static IndexType getAppropriate(int indexCount) {
+            if (indexCount < 256) {
+                return IndexType.UBYTE;
+            } else if (indexCount < 65536) {
+                return IndexType.USHORT;
+            } else {
+                return IndexType.UINT;
+            }
+        }
+    }
+    
+    static class VertexBuffer {
+        private int vao;
+        private int vbo;
+        private int ibo;
+        private IndexType indexType = IndexType.UBYTE;
+        private int indexCount;
+        private DrawMode mode;
+        private int vertexCount;
+        
+        public VertexBuffer() {
+            this.vao = GL30.glGenVertexArrays();
+            this.vbo = GL30.glGenBuffers();
+            this.ibo = GL30.glGenBuffers();
+        }
+        
+        public void upload(DrawMode mode, int vertexCount, ByteBuffer buffer) {
+            GL30.glBindVertexArray(this.vao);
+            GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER, this.vbo);
+            
+            if (this.mode != mode || this.vertexCount > vertexCount) {
+                GL30.glBufferData(GL30.GL_ARRAY_BUFFER, buffer, GL30.GL_DYNAMIC_DRAW);
+            } else {
+                GL30.glBufferSubData(GL30.GL_ARRAY_BUFFER, 0, buffer);
+            }
+            
+            GL30.glBindBuffer(GL30.GL_ELEMENT_ARRAY_BUFFER, this.ibo);
+        }
+        
+        public void draw() {
+            GL11.glDrawElements(this.mode.glEnum, this.indexCount, this.indexType.glEnum, 0);
+        }
+        
+        public void destroy() {
+            GL30.glDeleteVertexArrays(this.vao);
+            GL30.glDeleteBuffers(this.vbo);
+            GL30.glDeleteBuffers(this.ibo);
         }
     }
 }

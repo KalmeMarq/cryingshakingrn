@@ -4,7 +4,7 @@ public class FrameTimer {
     private long lastTime;
     private int frameCounter;
     public int fps;
-    private int ticksPerSecond;
+    private final int ticksPerSecond;
     private long tickLastTime;
     private float tickDelta;
     private int tickCounter;

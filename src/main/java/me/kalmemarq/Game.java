@@ -248,7 +248,7 @@ public class Game {
                     }
                 }
                 GL11.glEnd();
-                font.draw(this.frameTimer.fps + " FPS", 1, 1, 0xFFFFFF);
+                this.font.draw(this.frameTimer.fps + " FPS", 1, 1, 0xFFFFFF);
             }
 
 
@@ -260,10 +260,10 @@ public class Game {
             bufferBuilder.vertex(40, 0, 0).next();
             bufferBuilder.draw();
 
-            window.update();
+            this.window.update();
 
             if (this.frameTimer.update()) {
-                window.setTitle("Crying Shaking rn " + this.frameTimer.fps + " FPS");
+                this.window.setTitle("Crying Shaking rn " + this.frameTimer.fps + " FPS");
             }
         }
 
@@ -283,7 +283,7 @@ public class Game {
     }
 
     public void destroy() {
-        font.destroy();
-        window.destroy();
+        this.font.destroy();
+        this.window.destroy();
     }
 }
