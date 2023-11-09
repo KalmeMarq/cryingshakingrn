@@ -11,8 +11,9 @@ import org.lwjgl.opengl.GL11;
 import me.kalmemarq.Main.BufferBuilder;
 
 public class Game {
+    private static Game instance;
     static final Random RANDOM = new Random();
-    public static int SEED = RANDOM.nextInt(2000);
+    public static int SEED = Game.RANDOM.nextInt(2000);
 
     private final Window window;
     private final Font font;
@@ -20,21 +21,22 @@ public class Game {
     private final FrameTimer frameTimer;
 
     public Game() {
+        Game.instance = this;
         this.window = new Window(800, 600, "Crying Shaking rn");
         this.font = new Font();
         this.frameTimer = new FrameTimer(60);
 
-        window.addWindowHandler(new Window.WindowEventHandler() {
+        this.window.addWindowHandler(new Window.WindowEventHandler() {
             @Override
             public void onSizeChanged() {
-                GL11.glViewport(0, 0, window.getContentWidth(), window.getContentHeight());
+                GL11.glViewport(0, 0, Game.this.window.getContentWidth(), Game.this.window.getContentHeight());
             }
         });
-        window.addKeyboardHandler(new Window.KeyboardEventHandler() {
+        this.window.addKeyboardHandler(new Window.KeyboardEventHandler() {
             @Override
             public void onKey(int key, int scancode, int action, int modifiers) {
                 if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_PRESS) {
-                    GLFW.glfwSetWindowShouldClose(window.getHandle(), true);
+                    GLFW.glfwSetWindowShouldClose(Game.this.window.getHandle(), true);
                 }
 
                 if (key == GLFW.GLFW_KEY_F3 && action == GLFW.GLFW_PRESS) {
@@ -45,16 +47,12 @@ public class Game {
     }
 
     public void run() {
-        window.initialize();
-        window.setVsync(true);
+        this.window.initialize();
+        this.window.setVsync(true);
 
+        Player player = new Player();
+        
         GL11.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-        float old_playerX = -1;
-        float old_playerY = -1;
-        float playerX = 16 * 16;
-        float playerY = 16 * 16;
-        int playerDir = 0;
 
         Chunk[][] chunks = new Chunk[32][32];
         List<Chunk> chunksToRenderer = new ArrayList<>();
@@ -62,42 +60,20 @@ public class Game {
         new Tile(0x1020AA);
         new Tile(0x10AA20);
         new Tile(0x444444);
-        Function<Integer, Tile> tileSupplier = (id) -> {
-            return Tile.ids[id];
-        };
+        Function<Integer, Tile> tileSupplier = (id) -> Tile.ids[id];
 
-        font.load();
+        this.font.load();
 
         BufferBuilder bufferBuilder = new BufferBuilder();
 
-        while (!window.shouldClose()) {
+        while (!this.window.shouldClose()) {
             
-            int player_chunk_x = (int) (playerX / 16);
-            int player_chunk_y = (int) (playerY / 16);
+            int player_chunk_x = (int) (player.x / 16);
+            int player_chunk_y = (int) (player.y / 16);
 
+            
             for (int i = this.frameTimer.updateTick() - 1; i >= 0; --i) {
-                old_playerX = playerX;
-                old_playerY = playerY;
-
-                if (GLFW.glfwGetKey(window.getHandle(), GLFW.GLFW_KEY_D) != GLFW.GLFW_RELEASE) {
-                    playerX += 0.1f;
-                    playerDir = 3;
-                }
-
-                if (GLFW.glfwGetKey(window.getHandle(), GLFW.GLFW_KEY_A) != GLFW.GLFW_RELEASE) {
-                    playerX -= 0.1f;
-                    playerDir = 1;
-                }
-
-                if (GLFW.glfwGetKey(window.getHandle(), GLFW.GLFW_KEY_S) != GLFW.GLFW_RELEASE) {
-                    playerY += 0.1f;
-                    playerDir = 0;
-                }
-
-                if (GLFW.glfwGetKey(window.getHandle(), GLFW.GLFW_KEY_W) != GLFW.GLFW_RELEASE) {
-                    playerY -= 0.1f;
-                    playerDir = 2;
-                }
+                player.tick();
 
                 int radius = 1;
 
@@ -129,17 +105,17 @@ public class Game {
 
             GL11.glMatrixMode(GL11.GL_PROJECTION);
             GL11.glLoadIdentity();
-            GL11.glOrtho(0.0, window.getContentWidth() / 64.0f, window.getContentHeight() / 64.0f, 0.0, 1000.0, 3000.0);
+            GL11.glOrtho(0.0, this.window.getContentWidth() / 64.0f, this.window.getContentHeight() / 64.0f, 0.0, 1000.0, 3000.0);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glLoadIdentity();
             GL11.glTranslatef(0.0f, 0.0f, -2000.0f);
 
-            float wfbw = window.getContentWidth() / 64.0f;
-            float wfbh = window.getContentHeight() / 64.0f;
-            float offsetX = playerX - window.getContentWidth() / 64.0f / 2;
-            float offsetY = playerY - window.getContentHeight() / 64.0f / 2;
+            float wfbw = this.window.getContentWidth() / 64.0f;
+            float wfbh = this.window.getContentHeight() / 64.0f;
+            float offsetX = player.x - this.window.getContentWidth() / 64.0f / 2;
+            float offsetY = player.y - this.window.getContentHeight() / 64.0f / 2;
             
-            if (playerX != old_playerX || playerY != old_playerY || old_playerX == -1) {
+            if (player.x != player.prevX || player.y != player.prevY || player.prevX == -1) {
                 chunksToRenderer.clear();
                 for (int x = 0; x < 32; x++) {
                     for (int y = 0; y < 32; y++) {
@@ -195,40 +171,14 @@ public class Game {
                 }
             }
 
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-            GL11.glVertex3f(playerX - 0.5f + -offsetX, playerY - 0.5f + -offsetY, 0.0f);
-            GL11.glVertex3f(playerX - 0.5f + -offsetX, playerY + 0.5f + -offsetY, 0.0f);
-            GL11.glVertex3f(playerX + 0.5f + -offsetX, playerY + 0.5f + -offsetY, 0.0f);
-            GL11.glVertex3f(playerX + 0.5f + -offsetX, playerY - 0.5f + -offsetY, 0.0f);
-
-            GL11.glColor4f(1.0f, 0.0f, 1.0f, 1.0f);
-            if (playerDir == 0) {
-                GL11.glVertex3f(playerX + -offsetX - 0.05f, playerY + -offsetY, 0);
-                GL11.glVertex3f(playerX + -offsetX - 0.05f, playerY + -offsetY + 1f, 0);
-                GL11.glVertex3f(playerX + -offsetX + 0.05f, playerY + -offsetY + 1f, 0);
-                GL11.glVertex3f(playerX + -offsetX + 0.05f, playerY + -offsetY, 0);
-            } else if (playerDir == 2) {
-                GL11.glVertex3f(playerX + -offsetX - 0.05f, playerY + -offsetY - 1f, 0);
-                GL11.glVertex3f(playerX + -offsetX - 0.05f, playerY + -offsetY, 0);
-                GL11.glVertex3f(playerX + -offsetX + 0.05f, playerY + -offsetY, 0);
-                GL11.glVertex3f(playerX + -offsetX + 0.05f, playerY + -offsetY - 1f, 0);
-            } else if (playerDir == 1) {
-                GL11.glVertex3f(playerX + -offsetX - 1f, playerY + -offsetY - 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX - 1f, playerY + -offsetY + 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX, playerY + -offsetY + 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX, playerY + -offsetY - 0.05f, 0);
-            } else if (playerDir == 3) {
-                GL11.glVertex3f(playerX + -offsetX, playerY + -offsetY - 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX, playerY + -offsetY + 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX + 1f, playerY + -offsetY + 0.05f, 0);
-                GL11.glVertex3f(playerX + -offsetX + 1f, playerY + -offsetY - 0.05f, 0);
-            }
-            GL11.glEnd();
+            GL11.glPushMatrix();
+            GL11.glTranslatef(-offsetX, -offsetY, 0);
+            player.render((float) this.frameTimer.tickDelta);
+            GL11.glPopMatrix();
 
             GL11.glMatrixMode(GL11.GL_PROJECTION);
             GL11.glLoadIdentity();
-            GL11.glOrtho(0.0, window.getContentWidth() / 3.0f, window.getContentHeight() / 3.0f, 0.0, 1000.0, 3000.0);
+            GL11.glOrtho(0.0, this.window.getContentWidth() / 3.0f, this.window.getContentHeight() / 3.0f, 0.0, 1000.0, 3000.0);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glLoadIdentity();
             GL11.glTranslatef(0.0f, 0.0f, -2000.0f);
@@ -239,7 +189,7 @@ public class Game {
                     for (int y = 0; y < 32; y++) {
                         Chunk chunk = chunks[x][y];
                         if (chunk == null) GL11.glColor4f(0.2f, 0.2f, 0.2f, 1.0f);
-                        else if (chunksToRenderer.indexOf(chunk) >= 0) GL11.glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
+                        else if (chunksToRenderer.contains(chunk)) GL11.glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
                         else GL11.glColor4f(0.0f, 1.0f, 0.0f, 1.0f);
                         GL11.glVertex3f(x * 2, y * 2, 0);
                         GL11.glVertex3f(x * 2, y * 2 + 2, 0);
@@ -282,8 +232,16 @@ public class Game {
         this.destroy();
     }
 
+    public Window getWindow() {
+        return this.window;
+    }
+
     public void destroy() {
         this.font.destroy();
         this.window.destroy();
+    }
+
+    public static Game getInstance() {
+        return Game.instance;
     }
 }
