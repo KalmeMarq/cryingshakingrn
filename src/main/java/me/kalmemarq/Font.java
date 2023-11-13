@@ -61,21 +61,31 @@ public class Font {
         }
     }
 
+    public void drawWithShadow(String text, int x, int y, int color) {
+        this.draw(text, x, y, color, true);
+    }
+
     public void draw(String text, int x, int y, int color) {
+        this.draw(text, x, y, color, false);
+    }
+    
+    private void draw(String text, int x, int y, int color, boolean shadow) {
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, this.texture);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glBegin(GL11.GL_QUADS);
-        this.draw(text, x + 1, y + 1, color, true);
-        this.draw(text, x, y, color, false);
+        if (shadow) {
+            this.drawInternal(text, x + 1, y + 1, color, true);
+        }
+        this.drawInternal(text, x, y, color, false);
         GL11.glEnd();
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_BLEND);
     }
 
-    private void draw(String text, int x, int y, int color, boolean shadow) {
+    private void drawInternal(String text, int x, int y, int color, boolean shadow) {
         int xx = x;
 
         float r = (color >> 16 & 0xFF) / 255.0f;

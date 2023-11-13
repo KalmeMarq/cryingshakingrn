@@ -6,23 +6,25 @@ public class Tile {
 
     public int id;
     public int color;
+    public int txr;
     public CollisionBox collisionBox;
 
-    public Tile(int color) {
-        this(color, null);
+    public Tile(int color, int txr) {
+        this(color, txr, null);
     }
     
-    public Tile(int color, CollisionBox collisionBox) {
+    public Tile(int color, int txr, CollisionBox collisionBox) {
         this.id = ++Tile.idCounter;
         this.color = color;
         Tile.ids[this.id] = this;
         this.collisionBox = collisionBox;
+        this.txr = txr;
     }
     
     public boolean isCollidable() {
         return this.collisionBox != null;
     }
     
-    record CollisionBox(float x0, float y0, float x1, float y1) {
+    public record CollisionBox(float x0, float y0, float x1, float y1) {
     }
 }
